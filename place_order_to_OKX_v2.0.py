@@ -107,11 +107,18 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
                 if min_price_for_order < (min_cost_for_order/2): # сравнение выше с ценой мин ставки которую ты установил.
                     current_cost_for_order = int((min_cost_for_order/2) / min_price_for_order)
                     TP_for_order = target_point.replace("'", '').split(",")
+                    if posSide_id == "short":
+                        num_tp_trigger = 1
+                    elif posSide_id == "long":
+                        num_tp_trigger = 0
                     for price_order in price:
-                        if price_order == float(input_cost[0]):
+                        print(price_order)
+                        if price_order == float(input_cost[num_tp_trigger]):
                             if stop_lose == None:
                                 if posSide_id == "long":
                                     SL_calculate = float(price_order) - ((float(price_order) * 0.1) / int(leverage))  # вычиляем стоп лос на 10% с нужным пелечем
+                                elif posSide_id == "short":
+                                    SL_calculate = float(price_order) + ((float(price_order) * 0.1) / int(leverage))
                             else:
                                 SL_calculate = stop_lose
                             tradeAPI = Trade.TradeAPI(api_key, secret_key, passphrase, False, flag)
