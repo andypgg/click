@@ -3,7 +3,7 @@ import csv
 import re
 import ast
 
-1
+
 
 api_id = '23796739'
 api_hash = 'b04f272bbefc7b1c6249bdcb3fd8f792'
