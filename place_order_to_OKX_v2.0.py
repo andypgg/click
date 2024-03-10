@@ -65,7 +65,6 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
                 break
             else:
                 check_coin1 = None
-        print(check_coin1)
         if check_coin1 != None:
             set_lever = Account.AccountAPI(api_key, secret_key, passphrase, False, flag)
 
@@ -91,28 +90,32 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
             for iu in result_for_coin["data"]:
                 if iu["instId"] == check_coin1:
                     price_for_tpTrigger = iu["tickSz"]
-                    print(price_for_tpTrigger, "asdadadad")
             # Retrieve mark price
             result1 = publicDataAPI.get_mark_price(instType="SWAP",)
             for i in result1["data"]:
                 if i["instId"] == check_coin1:
                     price_market = i["markPx"]
             input_cost = (((' '.join(re.findall(r'\'([^\'\']+)\'', input_point_id)))).replace(',', '.')).split()
-            if float(price_market) > float(input_cost[1]):#уточнить у артера берем линижний предег вдруг тренд разворот
-                price = (float(input_cost[0]), float(input_cost[1]))
-            else:
-                price = (float(input_cost[0]), float(price_market))
             min_price_for_order = (float(price_market) * float(price_low))/int(leverage) # это минимальная цена ордера с плечем
             if float(usdt_info['cashBal']) >= min_cost_for_order and float(usdt_info['cashBal']) >= ((float(min_price_for_order))*2): #проверяю что балан больше минимальной цена которую мы выставили для торгов, и проверял что баланс больше мин цена вхождения Х2
                 if min_price_for_order < (min_cost_for_order/2): # сравнение выше с ценой мин ставки которую ты установил.
                     current_cost_for_order = int((min_cost_for_order/2) / min_price_for_order)
                     TP_for_order = target_point.replace("'", '').split(",")
                     if posSide_id == "short":
+                        psition_for_tp = "buy"
                         num_tp_trigger = 1
+                        if float(price_market) < float(input_cost[1]):  # уточнить у артера берем линижний предег вдруг тренд разворот
+                            price = (float(input_cost[1]), float(price_market))
+                        else:
+                            price = (float(input_cost[0]), float(input_cost[1]))
                     elif posSide_id == "long":
+                        psition_for_tp = "sell"
                         num_tp_trigger = 0
+                        if float(price_market) > float(input_cost[1]):  # уточнить у артера берем линижний предег вдруг тренд разворот
+                            price = (float(input_cost[0]), float(input_cost[1]))
+                        else:
+                            price = (float(input_cost[0]), float(price_market))
                     for price_order in price:
-                        print(price_order)
                         if price_order == float(input_cost[num_tp_trigger]):
                             if stop_lose == None:
                                 if posSide_id == "long":
@@ -121,6 +124,9 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
                                     SL_calculate = float(price_order) + ((float(price_order) * 0.1) / int(leverage))
                             else:
                                 SL_calculate = stop_lose
+                            money_for_algo_SL = (((current_cost_for_order * min_price_for_order)/(len(TP_for_order))) / int(price_low))
+                            formatted_number_SL = "{:.20f}".format(money_for_algo_SL)
+                            formatted_number_SL = ((float(formatted_number_SL)*int(leverage))*8)
                             tradeAPI = Trade.TradeAPI(api_key, secret_key, passphrase, False, flag)
                             result_order = tradeAPI.place_order(
                                 instId=check_coin1,
@@ -129,9 +135,9 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
                                 posSide=posSide_id,
                                 ordType="limit",
                                 slTriggerPx = SL_calculate,
-                                slOrdPx = "-1",
+                                slOrdPx = formatted_number_SL,
                                 px=price_order,
-                                sz=(current_cost_for_order+1)
+                                sz=(current_cost_for_order)
                             )
                             if result_order["code"] == "0":
                                 print("Successful order request，order_id = ",result_order["data"][0]["ordId"])
@@ -139,13 +145,16 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
                                 print("Unsuccessful order request，error_code = ",result_order["data"][0]["sCode"], ", Error_message = ", result_order["data"][0]["sMsg"])
                             money_for_algo_TP = (((current_cost_for_order * min_price_for_order)/(len(TP_for_order))) / int(price_low))
                             formatted_number = "{:.20f}".format(money_for_algo_TP)
+                            formatted_number = (float(formatted_number)*int(leverage))
                             for TP_for_order_out in TP_for_order:
+                                if TP_for_order_out == TP_for_order[-1]:
+                                    formatted_number = (float(formatted_number)*8)
                                 tradeAPI1 = Trade.TradeAPI(api_key, secret_key, passphrase, False, flag)
                                 result = tradeAPI1.place_algo_order(
                                     instId=check_coin1,
                                     tdMode="isolated",
-                                    side="sell",
-                                    posSide="long",
+                                    side=psition_for_tp,
+                                    posSide=posSide_id,
                                     ordType="conditional",
                                     sz="1",               # order amount: 100USDT
                                     tpTriggerPx=TP_for_order_out,
@@ -157,7 +166,7 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
                                     print(result)
                         else:
                             tradeAPI = Trade.TradeAPI(api_key, secret_key, passphrase, False, flag)
-                            result_order = tradeAPI.place_order(
+                            result_order1 = tradeAPI.place_order(
                                 instId=check_coin1,
                                 tdMode="isolated",
                                 side=side_to_trade,
@@ -166,11 +175,11 @@ with open(f'messages_from_Artur.csv', newline='') as file_with_info_about_coin:
                                 px=price_order,
                                 sz=current_cost_for_order
                             )
-                            if result_order["code"] == "0":
-                                print("Successful order request，order_id = ", result_order["data"][0]["ordId"])
+                            if result_order1["code"] == "0":
+                                print("Successful order request，order_id = ", result_order1["data"][0]["ordId"])
                             else:
-                                print("Unsuccessful order request，error_code = ", result_order["data"][0]["sCode"],
-                                      ", Error_message = ", result_order["data"][0]["sMsg"])
+                                print("Unsuccessful order request，error_code = ", result_order1["data"][0]["sCode"],
+                                      ", Error_message = ", result_order1["data"][0]["sMsg"])
                 else:
                     print(f"you_min_price_/2_less_than_min_order_price_for_{check_coin1}, with 2 leverage")
             else:
