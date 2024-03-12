@@ -6,7 +6,6 @@ import re
 import ast
 
 
-
 api_id = '23796739'
 api_hash = 'b04f272bbefc7b1c6249bdcb3fd8f792'
 phone_number = '+996550300129'
