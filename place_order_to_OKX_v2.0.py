@@ -45,7 +45,7 @@ while True:
     with open(f'messages_from_bot_for_test.csv', newline='') as File:
         test_cache = []
         lines = File.readlines()
-        for row_check in lines[-20:]:
+        for row_check in lines[-40:]:
             test_cache.append(row_check)
     with open(f'messages_from_bot.csv', newline='') as file_with_info_about_coin:
         reader = csv.reader(file_with_info_about_coin)
