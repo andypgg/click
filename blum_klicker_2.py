@@ -12,7 +12,7 @@ from pyautogui import ImageNotFoundException
 
 pyautogui.FAILSAFE = False
 
-#this is test config
+
 
 def click(x,y):
     win32api.SetCursorPos((x,y))
